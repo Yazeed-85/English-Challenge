@@ -1,72 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تحدي اللغة الإنجليزية | اللوبي</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0d0f1f">
+<title>English Challenge — تعلّم وتحدَّ</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%237c5cff'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='Arial' font-weight='700'%3EEC%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Sora:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/app.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 </head>
 <body>
-    <div class="lobby-container">
-        <header class="header">
-            <h1>🎮 تحدي اللغة الإنجليزية</h1>
-            <div class="profile-info" id="profile-info">
-                <span id="player-name">جاري التحميل...</span>
-                <span id="player-level" class="badge">المستوى: 1</span>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <div class="card actions-card">
-                <h2>العب الآن</h2>
-                <p>قم بدعوة صديق وابدأ التحدي المباشر!</p>
-                <button id="btn-invite" class="btn btn-primary">توليد رابط دعوة 🔗</button>
-                <div id="invite-link-container" style="display: none; margin-top: 15px;">
-                    <p>أرسل هذا الرابط لصديقك:</p>
-                    <input type="text" id="invite-link-input" readonly>
-                    <button id="btn-copy" class="btn btn-secondary">نسخ الرابط</button>
-                    <p class="waiting-text" id="waiting-status">بانتظار دخول الصديق...</p>
-                </div>
-            </div>
-
-            <div class="card stats-card">
-                <h2>تقدمك وأخطاؤك</h2>
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <span class="stat-value" id="stat-xp">0</span>
-                        <span class="stat-label">نقاط XP</span>
-                    </div>
-                    <div class="stat-box">
-                        <span class="stat-value" id="stat-mistakes">0</span>
-                        <span class="stat-label">كلمات للمراجعة</span>
-                    </div>
-                </div>
-                <button id="btn-review" class="btn btn-warning">مراجعة الأخطاء 🧠</button>
-            </div>
-        </main>
-    </div>
-
-    <!-- نافذة المراجعة -->
-    <div id="review-modal" class="modal">
-        <div class="modal-content">
-            <h2>الكلمات التي أخطأت بها</h2>
-            <div id="mistakes-list" class="mistakes-list">
-                <!-- سيتم إضافتها عبر جافاسكريبت -->
-            </div>
-            <button id="close-modal" class="btn btn-secondary">إغلاق</button>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="js/firebase-config.js"></script>
-    <script src="js/words.js"></script>
-    <script src="js/audio.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/lobby.js"></script>
+<div id="bg"><i></i><i></i><i></i></div>
+<main id="view" aria-live="polite"></main>
+<nav id="tabs" hidden></nav>
+<noscript>يحتاج هذا الموقع إلى JavaScript.</noscript>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>
