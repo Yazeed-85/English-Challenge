@@ -10,10 +10,13 @@ export function record(id, correct) {
   c.s++; if (!correct) c.w++;
   c.b = correct ? Math.min(5, c.b + 1) : Math.max(0, c.b - 2);
   c.d = dayNum() + INTERVALS[c.b]; c.l = dayNum();
+  // كلمة معلَّمة (أصفر): تصبح «متعلَّمة» (أخضر) عندما تُجاب صحيحًا حتى الصندوق 2
+  const f = S.flags[id]; if (f && f.s === 'l' && correct && c.b >= 2) { f.s = 'd'; f.dt = Date.now(); try { window.dispatchEvent(new CustomEvent('word:learned', { detail: id })); } catch (e) {} }
   save(); return c;
 }
 export const isDue = c => c && c.d <= dayNum();
 export const dueIds = () => { const S = state(); return Object.keys(S.cards).filter(id => BY_ID[id] && isDue(S.cards[id])).sort((a, b) => S.cards[a].d - S.cards[b].d || S.cards[a].b - S.cards[b].b); };
+export const flagIds = st => { const S = state(); return Object.keys(S.flags).filter(id => BY_ID[id] && (!st || S.flags[id].s === st)); };
 export const hardIds = () => { const S = state(); return Object.keys(S.cards).filter(id => BY_ID[id] && S.cards[id].w > 0 && S.cards[id].b <= 3).sort((a, b) => (S.cards[b].w - S.cards[b].b) - (S.cards[a].w - S.cards[a].b)); };
 export function newIds(level, n) {
   const S = state(); const out = [];

@@ -69,6 +69,7 @@ export function sheet(content, { title = '', onClose } = {}) {
   let closed = false;
   const close = () => { if (closed) return; closed = true; gsap.to(back, { opacity: 0, duration: .2 }); gsap.to(box, { yPercent: 100, duration: .3, ease: 'power2.in', onComplete: () => { back.remove(); box.remove(); onClose && onClose(); } }); };
   back.addEventListener('click', close);
+  const esc = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } }; document.addEventListener('keydown', esc);
   return { close, el: box, body };
 }
 export const confirmBox = (msg, ok = 'تأكيد', danger = false) => new Promise(res => {
@@ -77,7 +78,7 @@ export const confirmBox = (msg, ok = 'تأكيد', danger = false) => new Promis
 });
 
 // ---------- حلقة التقدّم
-export function ring(pct, { size = 120, stroke = 12, color = 'var(--mint)', track = 'rgba(255,255,255,.08)', inner = null } = {}) {
+export function ring(pct, { size = 120, stroke = 12, color = 'var(--ok)', track = 'rgba(255,255,255,.08)', inner = null } = {}) {
   const r = (size - stroke) / 2, c = 2 * Math.PI * r;
   const wrap = h('div', { class: 'ring', style: { width: size + 'px', height: size + 'px' } });
   wrap.innerHTML = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/><circle class="arc" cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c}" transform="rotate(-90 ${size / 2} ${size / 2})"/></svg>`;
@@ -90,7 +91,7 @@ export function ring(pct, { size = 120, stroke = 12, color = 'var(--mint)', trac
 export const countUp = (el, to, dur = 1, from = 0, fmt = v => Math.round(v)) => { const o = { v: from }; gsap.to(o, { v: to, duration: dur, ease: 'power2.out', onUpdate: () => { el.textContent = fmt(o.v); } }); };
 
 export function confetti(n = 70, origin = { x: innerWidth / 2, y: innerHeight * .35 }) {
-  const cols = ['#7c5cff', '#2ee6a8', '#ffb547', '#ff5c7a', '#58b7ff'];
+  const cols = ['#ff7a59', '#2ec4a6', '#ffc65c', '#ff5d7a', '#59b4f2', '#f4a6c0'];
   const layer = h('div', { class: 'confetti' }); document.body.append(layer);
   for (let i = 0; i < n; i++) {
     const p = h('i', { style: { background: cols[i % cols.length], left: origin.x + 'px', top: origin.y + 'px', width: 6 + Math.random() * 6 + 'px', height: 8 + Math.random() * 8 + 'px' } }); layer.append(p);

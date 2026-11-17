@@ -1,8 +1,12 @@
 // التطبيق: التوجيه (hash) + الانتقالات + تهيئة الهوية. كل شاشة تُصدّر mount(ctx) وتُرجع { el, destroy }.
 import { state, subscribe, save } from './store.js';
 import { connect, cloud, me, schedulePub, scheduleBackup, onCloud } from './identity.js';
-import { parseJoin, redeem, watchInbox, watchFriends, peek } from './net.js';
-import { h, icon, toast, $ } from './ui.js';
+import { parseJoin, redeem, watchInbox, watchFriends, watchRequests, peek } from './net.js';
+import { h, icon, toast, $, confetti } from './ui.js';
+import { registerCustom } from './lookup.js';
+import { refreshBookBadge, bump } from './flag.js';
+import { BY_ID } from './words.js';
+registerCustom();
 
 const routes = {
   home: () => import('./views/home.js'),
@@ -12,12 +16,13 @@ const routes = {
   me: () => import('./views/profile.js'),
   session: () => import('./views/session.js'),
   duel: () => import('./views/duel.js'),
+  read: () => import('./views/read.js'),
   onboard: () => import('./views/onboard.js')
 };
-const TABS = [['home', 'الرئيسية', 'home'], ['practice', 'تدرّب', 'target'], ['words', 'قاموسي', 'book'], ['friends', 'الأصدقاء', 'users'], ['me', 'أنا', 'user']];
+const TABS = [['home', 'الرئيسية', 'home'], ['practice', 'تدرّب', 'target'], ['words', 'دفتري', 'book'], ['friends', 'الأصدقاء', 'users'], ['me', 'أنا', 'user']];
 const FULL = new Set(['session', 'duel', 'onboard']);
 
-export const app = { inbox: [], friends: [], goto, cloud, join: null };
+export const app = { inbox: [], friends: [], reqs: [], goto, cloud, join: null };
 export function goto(path, replace = false) { if (replace) history.replaceState(null, '', '#/' + path); else location.hash = '#/' + path; if (replace) route(); }
 
 const view = $('#view'), tabs = $('#tabs');
@@ -31,11 +36,13 @@ buildTabs();
 function setTab(name) {
   tabs.hidden = FULL.has(name);
   document.body.classList.toggle('full', FULL.has(name));
-  for (const a of tabs.children) a.classList.toggle('on', a.dataset.t === name);
+  const hl = name === 'read' ? 'practice' : name;
+  for (const a of tabs.children) a.classList.toggle('on', a.dataset.t === hl);
+  refreshBookBadge();
   badge();
 }
 function badge() {
-  const d = tabs.querySelector('[data-t=friends] .dot'); if (d) d.hidden = !app.inbox.length;
+  const d = tabs.querySelector('[data-t=friends] .dot'); if (d) d.hidden = !(app.inbox.length || app.reqs.length);
 }
 
 async function route() {
@@ -71,6 +78,7 @@ export async function startOnline() {
   if (cloud.ok && !watching) {
     watching = true;
     offInbox = watchInbox(list => { const fresh = list.filter(x => !app.inbox.some(y => y.d === x.d)); app.inbox = list; badge(); if (fresh.length && !FULL.has((location.hash.split('/')[1] || ''))) { toast('🎮 لديك تحدٍّ جديد من صديق!'); } window.dispatchEvent(new Event('app:inbox')); });
+    watchRequests(list => { const fresh = list.length > app.reqs.length; app.reqs = list; badge(); if (fresh) toast('👋 طلب صداقة جديد'); window.dispatchEvent(new Event('app:inbox')); });
     offFriends = watchFriends(list => { app.friends = list; window.dispatchEvent(new Event('app:friends')); });
   }
   if (cloud.ok && pending) {
@@ -82,6 +90,7 @@ export async function startOnline() {
   return pid;
 }
 subscribe(() => { schedulePub(); scheduleBackup(); });
+window.addEventListener('word:learned', e => { const w = BY_ID[e.detail]; toast(`✅ تعلّمتَ كلمة «${w ? w.en : ''}» — انتقلت إلى دفترك كمتعلَّمة`, 'good'); confetti(40); const t = document.querySelector('#tabs a[data-t=words]'); t && bump(t); });
 window.addEventListener('online', () => startOnline());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !cloud.ok && me()) startOnline(); });
 app.startOnline = startOnline;

@@ -11,8 +11,8 @@ export function mount({ app }) {
   const steps = [];
 
   const s1 = () => h('div', { class: 'ob' },
-    h('div', { class: 'logo' }, 'EC'),
-    h('h1', {}, 'English Challenge'),
+    h('div', { class: 'logo' }, h('img', { src: 'assets/icon.svg', alt: 'YZ English' })),
+    h('h1', {}, 'YZ English'),
     h('p', { class: 'lead' }, 'تعلّم الإنجليزية بذكاء: يراجع لك الكلمات في وقتها المناسب، ويتحدّاك أصدقاؤك لتتقدّم أسرع.'),
     joined ? h('div', { class: 'note-box' }, '🎉 دعاك صديق للانضمام — أكمل إعداد حسابك وسيُضاف إلى أصدقائك تلقائيًا.') : null,
     h('ul', { class: 'perks' }, h('li', {}, icon('brain', 20), ' مراجعة ذكية بالتكرار المتباعد'), h('li', {}, icon('target', 20), ' تتبّع تقدّمك وأخطائك وملاحظاتك'), h('li', {}, icon('sword', 20), ' تحدَّ أصدقاءك مباشرة')),

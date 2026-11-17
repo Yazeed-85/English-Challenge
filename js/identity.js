@@ -83,7 +83,7 @@ export async function restoreByCode(code) {
 
 function mergeBackup(d) {
   const S = state();
-  for (const k of ['cards', 'notes', 'stars', 'days']) S[k] = Object.assign({}, d[k] || {}, S[k] || {});
+  for (const k of ['cards', 'notes', 'stars', 'days', 'flags', 'read']) S[k] = Object.assign({}, d[k] || {}, S[k] || {});
   for (const id in (d.cards || {})) if (!S.cards[id] || (d.cards[id].s > S.cards[id].s)) S.cards[id] = d.cards[id];
   S.xp = Math.max(S.xp, d.xp || 0); S.streak = (d.streak && d.streak.best > S.streak.best) ? d.streak : S.streak;
   if (!S.log.length && d.log) S.log = d.log; if (d.settings) S.settings = Object.assign({}, d.settings, S.settings);
@@ -110,7 +110,7 @@ export function scheduleBackup() { clearTimeout(bkTimer); bkTimer = setTimeout(b
 export async function backupNow() {
   const S = state(), m = S.me; if (!m || !cloud.ok) return false;
   try {
-    const d = { cards: S.cards, notes: S.notes, stars: S.stars, days: S.days, log: S.log.slice(0, 20), xp: S.xp, streak: S.streak, settings: S.settings, name: m.name, av: m.av };
+    const d = { cards: S.cards, notes: S.notes, stars: S.stars, flags: S.flags, read: S.read, days: S.days, log: S.log.slice(0, 20), xp: S.xp, streak: S.streak, settings: S.settings, name: m.name, av: m.av };
     let str = JSON.stringify(d); if (str.length > 140000) { d.log = []; str = JSON.stringify(d); }
     await set(ref(db, 'priv/' + m.pid), { d: str, t: Date.now() }); return true;
   } catch (e) { cloud.err = e.message; return false; }

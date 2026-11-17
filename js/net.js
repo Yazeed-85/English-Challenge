@@ -47,9 +47,9 @@ export function watchInbox(cb) {
   return onValue(ref(db, 'inbox/' + me), s => { const v = s.val() || {}; cb(Object.keys(v).map(from => ({ from, d: v[from].d, t: v[from].t })).sort((a, b) => b.t - a.t)); });
 }
 
-export async function createDuel(friendPid, lv = 0) {
-  const me = myPid(); const id = rid(10);
-  await set(ref(db, 'duels/' + id), { a: me, b: friendPid, seed: 1 + Math.floor(Math.random() * 2e9), n: 8, lv, st: 'invite', c: Date.now() });
+export async function createDuel(friendPid, opt = {}) {
+  const me = myPid(); const id = rid(10); const k = opt.k || 'q'; const nn = opt.n || 10;
+  await set(ref(db, 'duels/' + id), { a: me, b: friendPid, seed: 1 + Math.floor(Math.random() * 2e9), n: nn, lv: 0, k, st: 'invite', c: Date.now() });
   await set(ref(db, `inbox/${friendPid}/${me}`), { d: id, t: Date.now() });
   return id;
 }
@@ -67,3 +67,20 @@ export const sendAnswer = (id, i, choice, ms) => set(ref(db, `duels/${id}/ans/${
 export const finishDuel = id => set(ref(db, `duels/${id}/st`), 'done').catch(() => {});
 export const dropDuel = id => remove(ref(db, 'duels/' + id)).catch(() => {});
 export { serverNow };
+
+export const sendProgress = (id, v) => set(ref(db, `duels/${id}/p/${myPid()}`), v);
+
+// ---- إضافة صديق بالمعرّف (طلب يقبله الطرف الآخر)
+export async function sendRequest(pid) {
+  const me = myPid(); if (pid === me) throw new Error('هذا معرّفك أنت!');
+  const p = await peek(pid); if (!p) throw new Error('لا يوجد لاعب بهذا المعرّف');
+  const s = await get(ref(db, `friends/${me}/${pid}`)); if (s.exists()) throw new Error('هو صديقك بالفعل');
+  await set(ref(db, `freq/${pid}/${me}`), { t: Date.now() });
+  return p;
+}
+export async function acceptRequest(from) {
+  const me = myPid();
+  await update(ref(db), { [`friends/${me}/${from}`]: '1', [`friends/${from}/${me}`]: '1', [`freq/${me}/${from}`]: null });
+}
+export const declineRequest = from => remove(ref(db, `freq/${myPid()}/${from}`));
+export function watchRequests(cb) { return onValue(ref(db, 'freq/' + myPid()), s => { const v = s.val() || {}; cb(Object.keys(v).map(f => ({ from: f, t: v[f].t })).sort((a, b) => b.t - a.t)); }); }

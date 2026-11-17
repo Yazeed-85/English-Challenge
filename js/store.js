@@ -2,7 +2,7 @@
 const KEY = 'ec2.state';
 const blank = () => ({
   v: 1, me: null, cards: {}, notes: {}, stars: {}, log: [], days: {}, xp: 0, streak: { n: 0, best: 0, last: '' },
-  settings: { sound: true, rate: 0.85, goal: 20, level: 1 }, duels: [], totals: { sessions: 0, q: 0, ok: 0 }, pendingJoin: null, pubXp: 0
+  settings: { sound: true, rate: 0.85, goal: 20, level: 1 }, duels: [], totals: { sessions: 0, q: 0, ok: 0 }, pendingJoin: null, pubXp: 0, flags: {}, read: {}
 });
 let S = blank();
 try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(blank(), JSON.parse(raw)); } catch (e) {}
