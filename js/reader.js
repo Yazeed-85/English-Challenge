@@ -39,34 +39,51 @@ export function openToken(token, sentence, fromEl) {
   return s;
 }
 
-export function reader(passage, { onSpeakDone } = {}) {
-  const S = state(); let speaking = false, slow = false, cancel = false, showTr = false;
-  const lines = passage.en.map((sent, i) => {
-    const en = h('div', { class: 'en', dir: 'ltr' });
+export function reader(passage, { onCursor } = {}) {
+  const S = state(); let speaking = false, slow = false, cancel = false, showTr = false, curI = -1;
+  // نص متّصل: كل جملة span داخل فقرة واحدة، والترجمة فقرة عربية متّصلة تحتها
+  const sents = passage.en.map((sent, i) => {
+    const sp = h('span', { class: 'sent', dir: 'ltr', 'data-i': i });
     for (const m of sent.matchAll(TOK)) {
-      if (m[1]) { const r = resolve(m[1]); en.append(h('span', { class: 'w', 'data-t': m[1], 'data-l': r.lemma, 'data-s': i }, m[1])); }
-      else en.append(m[2]);
+      if (m[1]) { const r = resolve(m[1]); sp.append(h('span', { class: 'w', 'data-t': m[1], 'data-l': r.lemma, 'data-s': i }, m[1])); }
+      else sp.append(m[2]);
     }
-    const tr = h('div', { class: 'tr' }, passage.ar[i]);
-    return h('div', { class: 'line' }, en, tr);
+    return sp;
   });
-  const trs = lines.map(l => l.querySelector('.tr'));
-  const text = h('div', { class: 'ptext' }, lines);
+  const para = h('p', { class: 'para', dir: 'ltr' });
+  sents.forEach((s, i) => { para.append(s); if (i < sents.length - 1) para.append(' '); });
+  const trSents = passage.ar.map((t, i) => h('span', { class: 'tsent', 'data-i': i }, t + ' '));
+  const trBox = h('div', { class: 'trbox', hidden: true }, h('div', { class: 'trin' }, h('p', { class: 'para ar', dir: 'rtl' }, trSents)));
+  const text = h('div', { class: 'ptext' }, para);
+  const mark = (i, cls) => { sents.forEach((s, k) => s.classList.toggle(cls, k === i)); trSents.forEach((s, k) => s.classList.toggle(cls, k === i)); };
+  // مؤشّر القراءة الحيّ: يظهر عند الطرفين، ويتحرك بسلاسة
+  function setCursor(i, remote) {
+    if (i === curI || i < 0 || i >= sents.length) return; curI = i; mark(i, 'cur');
+    const s = sents[i]; gsap.fromTo(s, { backgroundColor: 'rgba(255,198,92,.55)' }, { backgroundColor: 'rgba(255,198,92,.16)', duration: .9, ease: 'power2.out' });
+    if (remote) { const r = s.getBoundingClientRect(); if (r.top < 90 || r.bottom > innerHeight - 90) s.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    else onCursor && onCursor(i);
+  }
   const listenBtn = h('button', { class: 'btn ghost sm', onclick: () => speaking ? stop() : play() }, icon('volume', 18), h('span', {}, ' استمع للفقرة'));
   const slowBtn = h('button', { class: 'chip sm', onclick: e => { slow = !slow; e.currentTarget.classList.toggle('on', slow); } }, '🐢 بطيء');
   const trBtn = h('button', { class: 'btn ghost sm', onclick: () => toggleTr() }, icon('book', 18), h('span', {}, ' إظهار الترجمة'));
-  function toggleTr(v) { showTr = v === undefined ? !showTr : v; trBtn.lastChild.textContent = showTr ? ' إخفاء الترجمة' : ' إظهار الترجمة'; trs.forEach((t, i) => { if (showTr) { t.style.display = 'block'; gsap.fromTo(t, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: .4, delay: i * .06, ease: 'power2.out' }); } else gsap.to(t, { height: 0, opacity: 0, duration: .25, onComplete: () => { t.style.display = 'none'; } }); }); }
-  function stop() { cancel = true; speaking = false; try { speechSynthesis.cancel(); } catch (e) {} listenBtn.lastChild.textContent = ' استمع للفقرة'; lines.forEach(l => l.classList.remove('speaking')); }
+  function toggleTr(v) {
+    showTr = v === undefined ? !showTr : v; trBtn.lastChild.textContent = showTr ? ' إخفاء الترجمة' : ' إظهار الترجمة'; gsap.killTweensOf(trBox);
+    if (showTr) { trBox.hidden = false; gsap.fromTo(trBox, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: .45, ease: 'power3.out' }); gsap.from(trSents, { opacity: 0, y: 6, duration: .35, stagger: .07, delay: .1 }); }
+    else gsap.to(trBox, { height: 0, opacity: 0, duration: .3, ease: 'power2.in', onComplete: () => { trBox.hidden = true; } });
+  }
+  function stop() { cancel = true; speaking = false; try { speechSynthesis.cancel(); } catch (e) {} listenBtn.lastChild.textContent = ' استمع للفقرة'; mark(-1, 'speaking'); }
   async function play() {
     if (!canSpeak) { toast('جهازك لا يدعم النطق', 'bad'); return; }
     speaking = true; cancel = false; listenBtn.lastChild.textContent = ' إيقاف';
     for (let i = 0; i < passage.en.length && !cancel; i++) {
-      lines.forEach((l, k) => l.classList.toggle('speaking', k === i)); gsap.to(lines[i], { x: 0 });
+      mark(i, 'speaking'); setCursor(i);
       await new Promise(res => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(passage.en[i]); u.lang = 'en-US'; u.rate = slow ? .6 : S.settings.rate; u.onend = res; u.onerror = res; speechSynthesis.speak(u); setTimeout(res, 20000); } catch (e) { res(); } });
     }
-    stop(); onSpeakDone && onSpeakDone();
+    stop();
   }
-  const el = h('div', { class: 'reader' }, h('div', { class: 'rhead' }, h('div', { class: 'tag' }, passage.titleAr), h('h2', { dir: 'ltr' }, passage.title)), h('div', { class: 'rtools' }, listenBtn, slowBtn, trBtn), text,
+  // نقر على جملة (خارج الكلمات) = «أنا هنا»
+  para.addEventListener('click', e => { const s = e.target.closest('.sent'); if (s && !e.target.closest('.w')) setCursor(+s.dataset.i); });
+  const el = h('div', { class: 'reader' }, h('div', { class: 'rhead' }, h('div', { class: 'tag' }, passage.titleAr), h('h2', { dir: 'ltr' }, passage.title)), h('div', { class: 'rtools' }, listenBtn, slowBtn, trBtn), text, trBox,
     h('p', { class: 'muted small hint' }, '👆 اضغط أي كلمة لمعناها وإضافتها لدفترك · أو اضغط مطوّلًا واسحبها إلى «دفتري»'));
   paintFlags(el);
 
@@ -107,6 +124,6 @@ export function reader(passage, { onSpeakDone } = {}) {
   text.addEventListener('contextmenu', e => { if (e.target.closest('.w')) e.preventDefault(); });
   const onFlags = () => paintFlags(el); window.addEventListener('flags:changed', onFlags);
   el.destroy = () => { stop(); window.removeEventListener('flags:changed', onFlags); window.removeEventListener('pointerup', end); window.removeEventListener('pointercancel', end); window.removeEventListener('pointermove', mv); window.removeEventListener('touchmove', tm); drag && drag.remove(); };
-  el.toggleTr = toggleTr;
+  el.toggleTr = toggleTr; el.setCursor = setCursor; el.cursor = () => curI;
   return el;
 }

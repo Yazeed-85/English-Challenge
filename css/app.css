@@ -1,11 +1,15 @@
 :root{--bg:#0f1b1d;--bg2:#15272a;--surf:#1a2d31;--surf2:#234047;--line:rgba(255,236,214,.1);--txt:#fff6ec;--mut:#a6b9b6;--pri:#ff7a59;--pri2:#ffa26b;--ok:#2ec4a6;--gold:#ffc65c;--bad:#ff5d7a;--sky:#59b4f2;--r:20px;--tab:68px;--font:'Tajawal',system-ui,-apple-system,'Segoe UI',sans-serif;--en:'Sora','Tajawal',system-ui,sans-serif}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:16px;line-height:1.5;min-height:100%}
+html{background:var(--bg);min-height:100%}
+body{background:transparent}
+html,body{margin:0;color:var(--txt);font-family:var(--font);font-size:16px;line-height:1.5;min-height:100%}
 body{padding-bottom:calc(var(--tab) + env(safe-area-inset-bottom) + 18px);overflow-x:hidden}
 body.full{padding-bottom:24px}
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 input,textarea,select{font:inherit;color:inherit}
-#bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 80% at 50% -10%,#1f3b3f,var(--bg) 62%)}
+#bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(70% 55% at 90% -5%,rgba(255,122,89,.20),transparent 70%),radial-gradient(60% 50% at -8% 80%,rgba(46,196,166,.20),transparent 70%),radial-gradient(55% 45% at 85% 105%,rgba(255,198,92,.15),transparent 70%),radial-gradient(120% 80% at 50% -10%,#1f3b3f,var(--bg) 62%),var(--bg);background-size:140% 140%,140% 140%,140% 140%,100% 100%,100% 100%;animation:bgm 22s ease-in-out infinite alternate}
+@keyframes bgm{0%{background-position:0% 0%,0% 100%,100% 100%,0 0,0 0}100%{background-position:30% 20%,20% 70%,70% 80%,0 0,0 0}}
+#bg i{display:none}
 #bg i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.35}
 #bg i:nth-child(1){width:300px;height:300px;background:#ff7a59;top:-80px;right:-60px;animation:fl 14s ease-in-out infinite}
 #bg i:nth-child(2){width:260px;height:260px;background:#2ec4a6;bottom:10%;left:-90px;opacity:.18;animation:fl 18s ease-in-out infinite reverse}
@@ -266,3 +270,25 @@ select.inp option{background:var(--surf)}
 }
 @media (min-width:1400px){#view{max-width:1280px}}
 [hidden]{display:none!important}
+
+/* ===== v4: إخفاء أشرطة التمرير (التمرير يبقى بالماوس واللمس) ===== */
+*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}
+/* ===== فقرة متّصلة ===== */
+.ptext{display:block}.para{margin:0;font:500 19px/2.15 var(--en);letter-spacing:.1px;text-align:start}
+.para.ar{font:500 16.5px/2 var(--font);color:var(--ok)}
+.sent,.tsent{border-radius:8px;padding:2px 1px;transition:background .35s,box-shadow .35s;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.sent.cur,.tsent.cur{background:rgba(255,198,92,.16);box-shadow:0 0 0 3px rgba(255,198,92,.10)}
+.sent.speaking,.tsent.speaking{background:rgba(46,196,166,.2);box-shadow:0 0 0 3px rgba(46,196,166,.12)}
+.trbox{overflow:hidden}.trbox[hidden]{display:none}.trin{margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(46,196,166,.07);border:1px solid rgba(46,196,166,.22)}
+.rcard{gap:12px}
+/* ===== شاشة الأدوار ===== */
+.rview{display:flex;flex-direction:column;gap:12px}
+.turnbar{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.turnbar.mine{background:linear-gradient(135deg,rgba(255,122,89,.24),rgba(255,198,92,.12));border-color:rgba(255,122,89,.4)}
+.turnbar b{display:block;font-size:16px}.turnbar small{color:var(--mut);font-size:12.5px}
+.tdots{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}.tdots i{width:22px;height:5px;border-radius:9px;background:rgba(255,255,255,.14);transition:background .3s}
+.tdots i.on{background:var(--ok)}.tdots i.cur{background:var(--pri)}
+.waitbar{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;border-radius:16px;border:1px dashed var(--line);color:var(--mut);font-weight:700}
+.waitbar .od{width:10px;height:10px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1.25);opacity:1}}
+.btn:disabled{opacity:.55;pointer-events:none}

@@ -62,14 +62,30 @@ export function toast(msg, kind = '') {
 export function sheet(content, { title = '', onClose } = {}) {
   const back = h('div', { class: 'backdrop' });
   const body = h('div', { class: 'sheet-body' }, content);
-  const box = h('div', { class: 'sheet', role: 'dialog' }, h('div', { class: 'grab' }), title && h('div', { class: 'sheet-title' }, title), body);
+  const grab = h('div', { class: 'grab' });
+  const box = h('div', { class: 'sheet', role: 'dialog' }, grab, title && h('div', { class: 'sheet-title' }, title), body);
   document.body.append(back, box);
-  gsap.fromTo(back, { opacity: 0 }, { opacity: 1, duration: .25 });
-  gsap.fromTo(box, { yPercent: 100 }, { yPercent: 0, duration: .42, ease: 'power3.out' });
+  const wide = () => innerWidth >= 760;
+  // دخول: الخلفية تتلاشى، والنافذة تصعد (جوال) أو تكبر وتطفو (حاسوب)، ثم يظهر محتواها متتابعًا
+  gsap.fromTo(back, { opacity: 0 }, { opacity: 1, duration: .3, ease: 'power1.out' });
+  if (wide()) gsap.fromTo(box, { opacity: 0, y: 28, scale: .95 }, { opacity: 1, y: 0, scale: 1, duration: .45, ease: 'power3.out' });
+  else gsap.fromTo(box, { yPercent: 100 }, { yPercent: 0, duration: .5, ease: 'power4.out' });
+  const kids = [...body.children].slice(0, 8); if (kids.length) gsap.from(kids, { opacity: 0, y: 14, duration: .4, stagger: .045, delay: .12, ease: 'power2.out', clearProps: 'opacity,transform' });
   let closed = false;
-  const close = () => { if (closed) return; closed = true; gsap.to(back, { opacity: 0, duration: .2 }); gsap.to(box, { yPercent: 100, duration: .3, ease: 'power2.in', onComplete: () => { back.remove(); box.remove(); onClose && onClose(); } }); };
-  back.addEventListener('click', close);
-  const esc = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); } }; document.addEventListener('keydown', esc);
+  const esc = e => { if (e.key === 'Escape') close(); };
+  const close = () => {
+    if (closed) return; closed = true; document.removeEventListener('keydown', esc); gsap.killTweensOf([box, back]);
+    gsap.to(back, { opacity: 0, duration: .25, ease: 'power1.in' });
+    const o = wide() ? { opacity: 0, y: 20, scale: .96, duration: .26, ease: 'power2.in' } : { yPercent: 110, duration: .34, ease: 'power3.in' };
+    gsap.to(box, Object.assign(o, { onComplete: () => { back.remove(); box.remove(); onClose && onClose(); } }));
+  };
+  back.addEventListener('click', close); document.addEventListener('keydown', esc);
+  // سحب المقبض للأسفل لإغلاق النافذة على الجوال
+  let sy = null;
+  grab.addEventListener('pointerdown', e => { if (wide()) return; sy = e.clientY; grab.setPointerCapture(e.pointerId); gsap.killTweensOf(box); });
+  grab.addEventListener('pointermove', e => { if (sy == null) return; gsap.set(box, { y: Math.max(0, e.clientY - sy) }); });
+  const rel = e => { if (sy == null) return; const dy = e.clientY - sy; sy = null; if (dy > 110) { gsap.to(box, { y: innerHeight, duration: .25, ease: 'power2.in', onComplete: () => { closed = true; document.removeEventListener('keydown', esc); gsap.to(back, { opacity: 0, duration: .15 }); back.remove(); box.remove(); onClose && onClose(); } }); } else gsap.to(box, { y: 0, duration: .35, ease: 'back.out(1.6)' }); };
+  grab.addEventListener('pointerup', rel); grab.addEventListener('pointercancel', rel);
   return { close, el: box, body };
 }
 export const confirmBox = (msg, ok = 'تأكيد', danger = false) => new Promise(res => {

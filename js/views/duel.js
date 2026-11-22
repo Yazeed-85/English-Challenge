@@ -10,7 +10,7 @@ import { speak } from '../speech.js';
 import { sfx, buzz } from '../sfx.js';
 import { DUEL, XP } from '../config.js';
 import { POS_AR } from '../words.js';
-import { h, icon, avatar, toast, confetti, countUp, hl } from '../ui.js';
+import { h, icon, avatar, toast, confetti, countUp, hl, confirmBox } from '../ui.js';
 import { openForms } from './wordsheet.js';
 import { flagCount } from '../flag.js';
 
@@ -35,7 +35,7 @@ export function mount({ args, app }) {
       h('div', { class: 'pl r' }, isRead() ? null : h('span', { class: 'sc', id: 'op' }, '0'), h('b', {}, opp.n), avatar(opp.a, 34))));
   }
   const setStage = n => { stage.innerHTML = ''; stage.append(n); gsap.fromTo(n, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .35, ease: 'power3.out', clearProps: 'all' }); };
-  async function leave() { if (phase === 'play' || phase === 'read') { if (!confirm(isRead() ? 'إنهاء جلسة القراءة؟' : 'الانسحاب يعني خسارة هذه المباراة. متأكد؟')) return; } cleanup(); if (phase === 'wait' && d && d.a === meP) cancelDuel(id, d.b); app.goto('friends'); }
+  async function leave() { if (phase === 'play' || phase === 'read') { if (!await confirmBox(isRead() ? 'إنهاء جلسة القراءة؟' : 'الانسحاب يعني خسارة هذه المباراة. متأكد؟', isRead() ? 'إنهاء' : 'انسحاب', true)) return; } cleanup(); if (phase === 'wait' && d && d.a === meP) cancelDuel(id, d.b); app.goto('friends'); }
   function cleanup() { clearTimeout(timer); clearTimeout(revealT); clearTimeout(endTimer); unwatch && unwatch(); unwatch = null; rd && rd.destroy && rd.destroy(); rdPeer && rdPeer.destroy && rdPeer.destroy(); }
 
   function onData(v) {
@@ -48,12 +48,12 @@ export function mount({ args, app }) {
     if (d.st === 'invite') { if (d.b === meP && phase !== 'invite') { phase = 'invite'; renderInvite(); } else if (d.a === meP && phase !== 'wait') { phase = 'wait'; renderWait(); } return; }
     if (d.st === 'play' || d.st === 'done') {
       if (['load', 'invite', 'wait'].includes(phase)) { if (isRead()) { phase = 'read'; startRead(); } else { phase = 'count'; startCountdown(); } }
-      if (isRead()) updateReadStatus(); else { drawScores(); checkAdvance(); checkEnd(); }
+      if (isRead()) syncRead(); else { drawScores(); checkAdvance(); checkEnd(); }
     }
   }
 
-  const label = () => isRead() ? `قراءة معًا · ${d.n / 2} فقرات لكل واحد` : `${d.n} كلمة · من السهل إلى الأصعب`;
-  function renderInvite() { setStage(h('div', { class: 'card center big' }, opp ? avatar(opp.a, 84) : null, h('h2', {}, opp ? `${opp.n} يدعوك!` : 'تحدٍّ جديد'), h('p', { class: 'muted' }, label()), isRead() ? h('p', { class: 'muted small' }, 'تقرؤون معًا في المكالمة: لكل واحد فقرة بنفس المستوى.') : h('p', { class: 'muted small' }, 'نبدأ بكلمات سهلة جدًا ثم نتدرّج ببطء، ووقت كافٍ لكل سؤال.'), h('div', { class: 'row gap' }, h('button', { class: 'btn primary grow', onclick: async e => { e.currentTarget.disabled = true; try { await acceptDuel(id, d.a); } catch (er) { toast('تعذّر القبول', 'bad'); e.target.disabled = false; } } }, 'قبول'), h('button', { class: 'btn ghost grow', onclick: async () => { await declineDuel(id, d.a); app.goto('friends'); } }, 'رفض')))); }
+  const label = () => isRead() ? `قراءة معًا · ${d.n} فقرات بالتناوب` : `${d.n} كلمة · من السهل إلى الأصعب`;
+  function renderInvite() { setStage(h('div', { class: 'card center big' }, opp ? avatar(opp.a, 84) : null, h('h2', {}, opp ? `${opp.n} يدعوك!` : 'تحدٍّ جديد'), h('p', { class: 'muted' }, label()), isRead() ? h('p', { class: 'muted small' }, 'تقرؤون معًا في المكالمة بالأدوار: فقرة لك يراها صديقك معك، ثم فقرة له تراها معه.') : h('p', { class: 'muted small' }, 'نبدأ بكلمات سهلة جدًا ثم نتدرّج ببطء، ووقت كافٍ لكل سؤال.'), h('div', { class: 'row gap' }, h('button', { class: 'btn primary grow', onclick: async e => { e.currentTarget.disabled = true; try { await acceptDuel(id, d.a); } catch (er) { toast('تعذّر القبول', 'bad'); e.target.disabled = false; } } }, 'قبول'), h('button', { class: 'btn ghost grow', onclick: async () => { await declineDuel(id, d.a); app.goto('friends'); } }, 'رفض')))); }
   function renderWait() { setStage(h('div', { class: 'card center big' }, opp ? avatar(opp.a, 84) : null, h('h2', {}, opp ? `بانتظار ${opp.n}…` : 'بانتظار الصديق…'), h('div', { class: 'spinner' }), h('p', { class: 'muted' }, 'وصله إشعار بالتحدّي. ستبدأ فور قبوله، ويمكنك البقاء هنا أو الرجوع لاحقًا.'), h('button', { class: 'btn ghost', onclick: leave }, 'إلغاء التحدّي'))); }
 
   // ================= تحدّي الكلمات =================
@@ -122,34 +122,53 @@ export function mount({ args, app }) {
   }
 
   // ================= قراءة معًا =================
-  const myPassage = i => plan[2 * i + (d.a === meP ? 0 : 1)], peerPassage = i => plan[2 * i + (d.a === meP ? 1 : 0)];
-  const pairs = () => plan.length / 2;
-  function startRead() { drawTop(); ri = Math.min(prog(meP), pairs() - 1); showRead(); }
-  function showRead() {
-    if (ri >= pairs()) return finishRead();
-    rd && rd.destroy && rd.destroy(); rdPeer && rdPeer.destroy && rdPeer.destroy(); rdPeer = null;
-    const p = myPassage(ri); rd = reader(p);
-    const status = h('div', { class: 'rstatus' }, h('i', { class: 'od' }), h('span', {}, 'صديقك يقرأ…'));
-    const next = h('button', { class: 'btn primary grow', hidden: true, onclick: () => { ri++; showRead(); } }, ri + 1 >= pairs() ? 'إنهاء الجلسة 🎉' : 'الفقرة التالية');
-    const doneBtn = h('button', { class: 'btn primary grow', onclick: () => { readyMe = ri + 1; sendProgress(id, ri + 1).catch(() => toast('تعذّر الإرسال', 'bad')); sfx.ok(); doneBtn.hidden = true; updateReadStatus(); } }, 'أنهيت القراءة');
-    const peerBox = h('div', { class: 'peerbox', hidden: true }); const peerBtn = h('button', { class: 'btn ghost grow', hidden: true, onclick: () => { if (!peerBox.hidden) { peerBox.hidden = true; peerBtn.textContent = '👀 فقرة صديقي'; return; } peerBox.hidden = false; peerBtn.textContent = 'إخفاء فقرة صديقي'; if (!rdPeer) { rdPeer = reader(peerPassage(ri)); peerBox.append(h('div', { class: 'tag' }, 'فقرة ' + (opp ? opp.n : 'صديقك')), rdPeer); } } }, '👀 فقرة صديقي');
-    const head = h('div', { class: 'row between' }, h('div', { class: 'tag' }, `الفقرة ${ri + 1} من ${pairs()} · المستوى ${p.lv}`), status);
-    const tip = h('p', { class: 'muted small tipline' }, '🎧 أنتما في مكالمة: اقرأ فقرتك لوحدك أولًا، ثم اشرحا لبعضكما ما فهمتما.');
-    setStage(h('div', { class: 'rview' }, h('div', { class: 'card' }, head, tip, rd), h('div', { class: 'row gap rbtns' }, doneBtn, peerBtn, next), peerBox));
-    el._rs = { status, next, doneBtn, peerBtn }; updateReadStatus();
-    gsap.fromTo(el.querySelector('.rview'), { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .4, clearProps: 'all' });
+  // ---- قراءة معًا بالأدوار: يقرأ لاعب فقرته والآخر يرى الفقرة نفسها معه مباشرة، ثم ينتقل الدور
+  // التقدّم المخزَّن p = (عدد فقراتي المنتهية)×100 + (آخر جملة وصلتُ إليها). الدور الحالي = مجموع الفقرات المنتهية عند الاثنين.
+  const doneOf = p => Math.floor(prog(p) / 100);
+  const turnOf = () => doneOf(d.a) + doneOf(d.b);
+  const readerOf = t => t % 2 === 0 ? d.a : d.b;
+  const total = () => plan.length;
+  let curT = -1, cursorSent = 0, cursorTimer = null, turnBusy = false;
+  function startRead() { drawTop(); curT = -1; syncRead(); }
+  function pushCursor(i) { // مؤشّر حيّ (تصاعدي فقط)
+    const t = curT; if (readerOf(t) !== meP) return; const v = i + 1; if (v <= cursorSent) return; cursorSent = v;
+    clearTimeout(cursorTimer); cursorTimer = setTimeout(() => sendProgress(id, Math.floor(t / 2) * 100 + v).catch(() => {}), 220);
   }
-  function updateReadStatus() {
-    const r = el._rs; if (!r || !d) return; const mine = readyMe >= ri + 1 || prog(meP) >= ri + 1, theirs = prog(oppP) >= ri + 1;
-    r.status.className = 'rstatus' + (theirs ? ' on' : ''); r.status.lastChild.textContent = theirs ? 'صديقك أنهى قراءته ✅' : 'صديقك يقرأ…';
-    if (mine && theirs) { r.next.hidden = false; r.peerBtn.hidden = false; if (!r._both) { r._both = true; sfx.win(); toast('أنهيتما القراءة — ناقشا ما فهمتماه 🎧', 'good'); } }
-    else if (mine) r.status.lastChild.textContent = 'بانتظار صديقك… (تحدّثا في المكالمة)';
+  function syncRead() {
+    if (!d || !plan || done) return; const t = turnOf();
+    if (t >= total()) return finishRead();
+    if (t !== curT) return showTurn(t);
+    const rp = readerOf(t); if (rp !== meP && rd) { const c = doneOf(rp) === Math.floor(t / 2) ? prog(rp) % 100 : 0; if (c > 0) rd.setCursor(c - 1, true); }
+  }
+  function showTurn(t) {
+    if (turnBusy) return; if (!opp) { setTimeout(syncRead, 120); return; } const first = curT < 0; curT = t; turnBusy = true; cursorSent = 0;
+    const build = () => {
+      rd && rd.destroy && rd.destroy(); const rp = readerOf(t), mine = rp === meP, p = plan[t]; const who = mine ? S.me : opp || { n: 'صديقك', a: '🙂' };
+      rd = reader(p, { onCursor: pushCursor });
+      const banner = h('div', { class: 'turnbar' + (mine ? ' mine' : '') }, avatar(mine ? S.me.av : who.a, 40),
+        h('div', { class: 'grow' }, h('b', {}, mine ? 'دورك الآن — اقرأ بصوتٍ عالٍ' : `دور ${who.n} — تابعه وساعده`), h('small', {}, mine ? 'صديقك يرى فقرتك الآن معك وسيساعدك' : 'تقرؤون الفقرة نفسها معًا، وسيُنهيها حين ينتهي')),
+        h('span', { class: 'pill', dir: 'ltr' }, `${t + 1} / ${total()}`));
+      const dots = h('div', { class: 'tdots' }, plan.map((_, k) => h('i', { class: k < t ? 'on' : k === t ? 'cur' : '' })));
+      const btn = mine ? h('button', { class: 'btn primary wide', onclick: () => { btn.disabled = true; clearTimeout(cursorTimer); sfx.ok(); sendProgress(id, (Math.floor(t / 2) + 1) * 100).then(() => { d.p = Object.assign({}, d.p, { [meP]: (Math.floor(t / 2) + 1) * 100 }); syncRead(); }).catch(() => { btn.disabled = false; toast('تعذّر الإرسال', 'bad'); }); } }, t + 1 >= total() ? 'أنهيت — إنهاء الجلسة 🎉' : 'أنهيت القراءة — دور صديقي')
+        : h('div', { class: 'waitbar' }, h('i', { class: 'od' }), h('span', {}, `${who.n} يقرأ… تابع معه ✨`));
+      const tip = h('p', { class: 'muted small tipline' }, `المستوى ${p.lv} · ${mine ? 'اقرأها لصديقك، وهو سيصحّح لك ويشرح ما صعب' : 'ساعده إن تعثّر: اضغط أي كلمة لمعناها، وأضفها لدفترك'}`);
+      const card = h('div', { class: 'card rcard' }, tip, rd);
+      const view = h('div', { class: 'rview' }, banner, dots, card, btn);
+      stage.innerHTML = ''; stage.append(view); el._rs = { view };
+      const tl = gsap.timeline({ onComplete: () => { turnBusy = false; syncRead(); } });
+      tl.fromTo(view, { opacity: 0, x: mine ? -40 : 40 }, { opacity: 1, x: 0, duration: .5, ease: 'power3.out', clearProps: 'transform,opacity' })
+        .from(banner, { y: -16, opacity: 0, duration: .4, ease: 'back.out(1.6)' }, '<.05').from(dots.children, { scale: 0, duration: .25, stagger: .015 }, '<.1')
+        .from(card, { y: 24, opacity: 0, duration: .45, ease: 'power3.out' }, '<.1');
+      if (!first) { sfx.pop && sfx.pop(); try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} }
+    };
+    const old = stage.firstElementChild;
+    if (first || !old) build(); else gsap.to(old, { opacity: 0, x: (readerOf(t) === meP) ? 40 : -40, duration: .28, ease: 'power2.in', onComplete: build });
   }
   function finishRead() {
-    if (done) return; done = true; cleanup(); phase = 'done'; const n = pairs(); const flagged = Math.max(0, flagCount() - flags0); const xp = n * 15 + flagged * 3; bumpDay(0, 0, xp);
+    if (done) return; done = true; cleanup(); phase = 'done'; const n = total(); const flagged = Math.max(0, flagCount() - flags0); const xp = n * 15 + flagged * 3; bumpDay(0, 0, xp);
     S.duels.unshift({ id, opp: opp ? opp.n : '؟', av: opp ? opp.a : '🙂', my: n, their: n, res: 'r', t: Date.now(), k: 'r' }); S.duels.length = Math.min(S.duels.length, 20); pushLog({ t: Date.now(), mode: 'duel', n, ok: n, xp, ms: 0 }); saveNow(); save(); finishDuel(id); setTimeout(() => dropDuel(id), 8000);
     const xpEl = h('b', {}, '0');
-    setStage(h('div', { class: 'card center big result' }, h('div', { class: 'trophy' }, '📖'), h('h2', {}, 'أنهيتما القراءة معًا!'), h('p', { class: 'muted' }, `قرأت ${n} فقرات وعلّمت ${flagged} كلمة جديدة في دفترك`), h('div', { class: 'stats3' }, h('div', {}, h('b', { dir: 'ltr' }, '+', xpEl), h('small', {}, 'خبرة')), h('div', {}, h('b', {}, n), h('small', {}, 'فقرات')), h('div', {}, h('b', {}, flagged), h('small', {}, 'كلمات جديدة'))),
+    setStage(h('div', { class: 'card center big result' }, h('div', { class: 'trophy' }, '📖'), h('h2', {}, 'أنهيتما القراءة معًا!'), h('p', { class: 'muted' }, `قرأتما ${n} فقرات وعلّمت ${flagged} كلمة جديدة في دفترك`), h('div', { class: 'stats3' }, h('div', {}, h('b', { dir: 'ltr' }, '+', xpEl), h('small', {}, 'خبرة')), h('div', {}, h('b', {}, n), h('small', {}, 'فقرات')), h('div', {}, h('b', {}, flagged), h('small', {}, 'كلمات جديدة'))),
       h('div', { class: 'row gap' }, h('button', { class: 'btn primary grow', onclick: () => app.goto('session/mywords') }, 'تدرّب على كلماتك'), h('button', { class: 'btn ghost grow', onclick: () => app.goto('friends') }, 'رجوع'))));
     countUp(xpEl, xp, 1); sfx.win(); confetti(70);
   }
