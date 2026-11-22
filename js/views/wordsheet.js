@@ -1,4 +1,5 @@
 // نافذة تفاصيل الكلمة: المعنى والتعريف والمثال والنطق والملاحظة والتعليم للدفتر والتصاريف.
+import { tapSentence, sayRow, plain } from '../tap.js';
 import { BY_ID, POS_AR, LEVELS, TOPICS } from '../words.js';
 import { state, save } from '../store.js';
 import { statusOf, STATUS_AR } from '../srs.js';
@@ -31,8 +32,8 @@ export function openWord(id) {
       h('div', { class: 'row gap' }, star, h('button', { class: 'icon-btn say', 'aria-label': 'نطق', onclick: () => speak(w.en) }, icon('volume', 22)))),
     h('div', { class: 'ar-mean' }, w.ar),
     w.def ? h('p', { class: 'def', dir: 'ltr' }, w.def) : null,
-    w.ex ? h('p', { class: 'ex', dir: 'ltr', html: hl(w.ex) }) : f && f.ctx ? h('p', { class: 'ex', dir: 'ltr' }, f.ctx) : null,
-    w.ex ? h('button', { class: 'btn ghost sm', onclick: () => speak(w.ex.replace(/[{}]/g, ''), false) }, icon('volume', 18), ' اسمع الجملة') : null,
+    w.ex ? tapSentence(w.ex) : f && f.ctx ? tapSentence(f.ctx) : null,
+    sayRow(w.en, w.ex || (f && f.ctx)),
     h('div', { class: 'progress-line' }, h('span', { class: 'pill st-' + st }, STATUS_AR[st]), dots, c ? h('span', { class: 'muted' }, `${c.s} محاولة · ${c.w} خطأ`) : h('span', { class: 'muted' }, 'لم تتدرّب عليها بعد')),
     f && f.s === 'd' ? h('div', { class: 'note-box good' }, `✅ تعلّمت هذه الكلمة${f.dt ? ' يوم ' + new Date(f.dt).toLocaleDateString('ar') : ''}. أحسنت!`) : null,
     h('div', { class: 'row gap wrap' }, flagBtn, w.pos ? h('button', { class: 'btn ghost sm', onclick: () => { forms.hidden = !forms.hidden; if (!forms.hidden) gsap.from(forms, { height: 0, opacity: 0, duration: .35, clearProps: 'all' }); } }, icon('clock', 18), ' التصاريف والأزمنة') : null),

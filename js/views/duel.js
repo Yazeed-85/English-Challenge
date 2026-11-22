@@ -1,5 +1,6 @@
 // تحدّي صديقين. نوعان: 'q' كلمات متدرّجة السهولة (١٠/٢٠/٣٠)، و'r' قراءة معًا (كل لاعب فقرته من نفس المستوى).
 // كل لاعب يكتب إجاباته/تقدّمه فقط، والنتيجة تُحسب عند الطرفين من نفس البذرة، فلا مضيف يقود اللعبة.
+import { tapSentence, sayRow, plain } from '../tap.js';
 import { state, save, bumpDay, saveNow, pushLog } from '../store.js';
 import * as SRS from '../srs.js';
 import { duelQuestions, duelPoints, duelSecs, TYPES } from '../quiz.js';
@@ -97,7 +98,7 @@ export function mount({ args, app }) {
     [...q._opts.children].forEach(b => { const i = +b.dataset.i; b.classList.remove('sel', 'dim'); if (i === q.ans) b.classList.add('good'); });
     const my = myAns[qi], oa = ansOf(oppP, qi); if (my && my.c !== q.ans) q._opts.children[my.c].classList.add('bad');
     setOpp(q, oa ? (oa.c === q.ans ? 'صديقك أصاب' : 'صديقك أخطأ') : 'لم يجب صديقك', oa ? (oa.c === q.ans ? 'ok' : 'no') : '');
-    const w = q.w; q._learn.hidden = false; q._learn.append(h('div', { class: 'lw' }, h('b', { dir: 'ltr' }, w.en), h('span', {}, w.ar), h('button', { class: 'icon-btn sm', onclick: () => speak(w.en) }, icon('volume', 16)), w.pos ? h('button', { class: 'icon-btn sm', onclick: () => openForms(w.id) }, icon('clock', 16)) : null), h('p', { class: 'ex', dir: 'ltr', html: hl(w.ex || '') }));
+    const w = q.w; q._learn.hidden = false; q._learn.append(h('div', { class: 'lw' }, h('b', { dir: 'ltr' }, w.en), h('span', {}, w.ar), w.pos ? h('button', { class: 'icon-btn sm', onclick: () => openForms(w.id) }, icon('clock', 16)) : null), w.ex ? tapSentence(w.ex) : null, sayRow(w.en, w.ex));
     gsap.from(q._learn, { opacity: 0, y: 8, duration: .3 });
     const wait = qi < 10 ? 4500 : 3800; gsap.fromTo(q._timeEl.firstChild, { width: '100%', background: 'var(--ok)' }, { width: '0%', duration: wait / 1000, ease: 'none' });
     revealT = setTimeout(nextQ, wait);

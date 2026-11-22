@@ -61,8 +61,10 @@ async function route() {
   view.append(next.el);
   next.el.classList.add('page');
   window.scrollTo(0, 0);
+  // نظّف كل ما بقي من صفحات سابقة (حتى لو تنقّل المستخدم بسرعة) حتى لا تتكدّس الصفحات
+  [...view.children].filter(n => n !== next.el && !n.dataset.leaving).forEach(n => { n.dataset.leaving = 1; gsap.killTweensOf(n); gsap.to(n, { opacity: 0, y: -8, duration: .16, onComplete: () => n.remove() }); setTimeout(() => n.remove(), 700); });
   if (old) {
-    gsap.to(old.el, { opacity: 0, y: -8, duration: .16, onComplete: () => { old.destroy && old.destroy(); old.el.remove(); } });
+    old.destroy && old.destroy();
     gsap.fromTo(next.el, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .38, ease: 'power3.out', delay: .1, clearProps: 'transform,opacity' });
   } else gsap.fromTo(next.el, { opacity: 0 }, { opacity: 1, duration: .5, clearProps: 'opacity' });
   next.after && next.after();

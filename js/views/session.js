@@ -1,4 +1,5 @@
 // جلسة التدرّب: مراجعة ذكية / تعلّم جديد / اختبار سريع / سرعة / استماع / إملاء / أكمل الجملة / أخطائي.
+import { tapSentence, sayRow, plain } from '../tap.js';
 import { WORDS, BY_ID, POS_AR } from '../words.js';
 import { state, save, bumpDay, today, pushLog, levelInfo, saveNow } from '../store.js';
 import * as SRS from '../srs.js';
@@ -70,7 +71,7 @@ export function mount({ args, app }) {
   const lvBefore = levelInfo(S.xp).lv;
 
   const bar = h('div', { class: 'bar' }, h('i'));
-  const comboEl = h('div', { class: 'combo', hidden: true });
+  const comboEl = h('div', { class: 'combo off' });
   const clock = speed ? h('div', { class: 'clock' }, '60') : null;
   const top = h('div', { class: 'stop' }, h('button', { class: 'icon-btn', 'aria-label': 'خروج', onclick: quit }, icon('x', 22)), bar, speed ? clock : h('div', { class: 'counter' }, '0/' + quizCount), comboEl);
   const stage = h('div', { class: 'stage' });
@@ -98,8 +99,7 @@ export function mount({ args, app }) {
       h('div', { class: 'big-word', dir: 'ltr' }, w.en),
       h('div', { class: 'muted', dir: 'ltr' }, POS_AR[w.pos]),
       h('button', { class: 'icon-btn say lg', onclick: () => speak(w.en) }, icon('volume', 26)),
-      h('div', { class: 'ar-mean' }, w.ar), h('p', { class: 'def', dir: 'ltr' }, w.def), h('p', { class: 'ex', dir: 'ltr', html: hl(w.ex || '') }),
-      h('button', { class: 'btn ghost sm', onclick: () => speak(w.ex || w.en) }, icon('volume', 18), ' اسمع الجملة'),
+      h('div', { class: 'ar-mean' }, w.ar), h('p', { class: 'def', dir: 'ltr' }, w.def), tapSentence(w.ex || ''), sayRow(w.en, w.ex),
       h('button', { class: 'btn primary wide', onclick: () => swap(next) }, k < n ? 'التالي' : 'ابدأ الاختبار'));
     swap(null, card);
   }
@@ -150,7 +150,7 @@ export function mount({ args, app }) {
       bumpDay(1, ok ? 1 : 0, gain);
       if (!ok && !speed && !requeued.has(q.id)) { requeued.add(q.id); items.push({ id: q.id, type: 'mean' }); }
     } else if (!ok) combo = 0;
-    comboEl.hidden = combo < 3; comboEl.textContent = `🔥 ${combo}`; if (combo >= 3) gsap.fromTo(comboEl, { scale: 1.5 }, { scale: 1, duration: .35, ease: 'back.out(2)' });
+    comboEl.classList.toggle('off', combo < 3); comboEl.textContent = `🔥 ${combo}`; if (combo >= 3) gsap.fromTo(comboEl, { scale: 1.5 }, { scale: 1, duration: .35, ease: 'back.out(2)' });
     ok ? sfx.ok() : (sfx.bad(), buzz(60));
     if (!ok) gsap.fromTo(card, { x: -10 }, { x: 0, duration: .5, ease: 'elastic.out(1,.3)' });
     setProgress();
@@ -161,8 +161,8 @@ export function mount({ args, app }) {
   function feedback(ok, q, chosen) {
     const w = q.w; const fb = h('div', { class: 'fb ' + (ok ? 'good' : 'bad') },
       h('div', { class: 'fb-head' }, icon(ok ? 'check' : 'x', 22), h('b', {}, ok ? pick2(['أحسنت!', 'ممتاز!', 'صحيح!', 'رائع!']) : 'ليست الصحيحة')),
-      h('div', { class: 'fb-word' }, h('span', { dir: 'ltr', class: 'en' + (isLearning(w.id) ? ' fl' : '') }, w.en), h('span', { class: 'ar' }, w.ar), h('button', { class: 'icon-btn sm', onclick: () => speak(w.en) }, icon('volume', 18))),
-      h('p', { class: 'ex', dir: 'ltr', html: hl(w.ex || '') }),
+      h('div', { class: 'fb-word' }, h('span', { dir: 'ltr', class: 'en' + (isLearning(w.id) ? ' fl' : '') }, w.en), h('span', { class: 'ar' }, w.ar)),
+      w.ex ? tapSentence(w.ex) : null, sayRow(w.en, w.ex),
       h('div', { class: 'row gap' }, q.type !== 'form' ? h('button', { class: 'btn ghost sm', onclick: () => openWord(w.id) }, icon('note', 18), ' ملاحظة') : null, w.pos ? h('button', { class: 'btn ghost sm', onclick: () => openForms(q.type === 'form' ? q.id : w.id) }, icon('clock', 18), ' تصاريف') : null, h('button', { class: 'btn primary grow', id: 'nxt', onclick: () => go() }, 'التالي')));
     const go = () => { document.removeEventListener('keydown', key); gsap.to(fb, { yPercent: 100, duration: .2, onComplete: () => { fb.remove(); next(); } }); };
     const key = e => { if (e.key === 'Enter' && !document.querySelector('.sheet')) go(); }; document.addEventListener('keydown', key);
